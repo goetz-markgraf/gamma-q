@@ -5,6 +5,7 @@ import de.gma.gamma.q.Context
 import de.gma.gamma.q.ui.swingutil.RasterLayout
 import de.gma.gamma.q.ui.swingutil.WindowUtil
 import java.awt.BorderLayout
+import java.awt.Font
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import javax.swing.*
@@ -17,7 +18,7 @@ class MainWindow(private val context: Context) : JFrame() {
     private val errorLabel = JLabel()
 
     init {
-        title = "Gamma Q – " + context.name
+        title = "Gamma Q – ${context.folder}/${context.name}"
         defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
 
         contentPane = createContentPane()
@@ -69,6 +70,7 @@ class MainWindow(private val context: Context) : JFrame() {
 
     private fun createEditor() =
         JTextPane().apply {
+            font = Font("Serif", Font.PLAIN, 18)
             inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.META_DOWN_MASK), "execute")
             actionMap.put("execute", ExecuteAction())
         }
@@ -92,7 +94,7 @@ class MainWindow(private val context: Context) : JFrame() {
                 refresh()
                 errorLabel.text = ""
             } catch (e: EvaluationException) {
-                errorLabel.text = e.message
+                errorLabel.text = "${e.message} (${e.source})"
             } catch (e: Exception) {
                 errorLabel.text = e.message
             }
