@@ -1,24 +1,28 @@
 package de.gma.gamma.q.ui
 
+import de.gma.gamma.datatypes.values.VoidValue
 import de.gma.gamma.parser.EvaluationException
 import de.gma.gamma.q.Context
 import de.gma.gamma.q.ui.swingutil.RasterLayout
 import de.gma.gamma.q.ui.swingutil.WindowUtil
 import java.awt.BorderLayout
+import java.awt.Dimension
 import java.awt.Font
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import javax.swing.*
 
 class MainWindow(private val context: Context) : JFrame() {
-    private val scopeList = DefaultListModel<String>()
-    private val watchList = DefaultListModel<String>()
+    private val scopeListModel = DefaultListModel<String>()
+    private val scopeList = createScopeList()
+    private val watchListModel = DefaultListModel<String>()
+    private val watchList = createWatchList()
     private val textPane = createEditor()
+    private val outputPane = createErrorPane()
     private val editor = textPane.styledDocument
-    private val errorLabel = JLabel()
 
     init {
-        title = "Gamma Q – ${context.folder}/${context.name}"
+        title = "Gamma Q – ${context.name}(${context.folder})"
         defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
 
         contentPane = createContentPane()
@@ -34,8 +38,9 @@ class MainWindow(private val context: Context) : JFrame() {
     }
 
     private fun refresh() {
-        scopeList.clear()
-        scopeList.addAll(context.getBindings())
+        scopeList.clearSelection()
+        scopeListModel.clear()
+        scopeListModel.addAll(context.getBindings())
         editor.remove(0, editor.length)
         editor.insertString(0, "let ", null)
     }
@@ -55,17 +60,29 @@ class MainWindow(private val context: Context) : JFrame() {
     private fun createBrowserPanel() =
         JPanel(RasterLayout(50, 12)).apply {
             add("1 1", JLabel("Scope"))
-            add("1 3 12 -1", JScrollPane(JList(scopeList)))
+            add("1 3 12 -1", JScrollPane(scopeList))
 
             add("15 1", JLabel("Watch"))
-            add("15 3 12 -1", JScrollPane(JList(watchList)))
+            add("15 3 12 -1", JScrollPane(watchList))
         }
 
-    private fun createEditorPanel() =
-        JPanel(RasterLayout(50, 12)).apply {
-            add("1 1 -1 -2", JScrollPane(textPane))
+    private fun createScopeList() =
+        JList(scopeListModel).apply {
+            selectionMode = ListSelectionModel.SINGLE_SELECTION
+            addListSelectionListener { loadSource(selectedValue) }
+        }
 
-            add("1 -1 -1 1", errorLabel)
+    private fun createWatchList() =
+        JList(watchListModel).apply {
+            selectionMode = ListSelectionModel.SINGLE_SELECTION
+        }
+
+
+    private fun createEditorPanel() =
+        JSplitPane(JSplitPane.VERTICAL_SPLIT).apply {
+            border = padding(2)
+            leftComponent = JScrollPane(textPane)
+            rightComponent = JScrollPane(outputPane)
         }
 
     private fun createEditor() =
@@ -73,7 +90,21 @@ class MainWindow(private val context: Context) : JFrame() {
             font = Font("Serif", Font.PLAIN, 18)
             inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.META_DOWN_MASK), "execute")
             actionMap.put("execute", ExecuteAction())
+            preferredSize = Dimension(300, 150)
         }
+
+    private fun createErrorPane() =
+        JTextPane().apply {
+            isEditable = false
+            isEnabled = false
+            preferredSize = Dimension(300, 150)
+        }
+
+    private fun loadSource(binding: String?) {
+        if (binding == null) return
+        editor.remove(0, editor.length)
+        editor.insertString(0, context.getSourceForBinding(binding), null)
+    }
 
     companion object {
         private fun padding(i: Int = 1) = BorderFactory.createEmptyBorder(5 * i, 5 * i, 5 * i, 5 * i)
@@ -90,13 +121,14 @@ class MainWindow(private val context: Context) : JFrame() {
 
         override fun actionPerformed(e: ActionEvent?) {
             try {
-                context.execute(editor.getText(0, editor.length))
+                val result = context.execute(editor.getText(0, editor.length))
                 refresh()
-                errorLabel.text = ""
+                if (result !is VoidValue)
+                    outputPane.document.insertString(0, "${result}\n", null)
             } catch (e: EvaluationException) {
-                errorLabel.text = "${e.message} (${e.source})"
+                outputPane.document.insertString(0, "${e.message} (${e.source})\n", null)
             } catch (e: Exception) {
-                errorLabel.text = e.message
+                outputPane.document.insertString(0, "Error: ${e.message}\n", null)
             }
         }
     }
