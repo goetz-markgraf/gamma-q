@@ -124,12 +124,17 @@ class MainWindow(private val context: Context) : JFrame() {
                 val result = context.execute(editor.getText(0, editor.length))
                 refresh()
                 if (result !is VoidValue)
-                    outputPane.document.insertString(0, "${result}\n", null)
+                    addOutputLine(result.toString())
             } catch (e: EvaluationException) {
-                outputPane.document.insertString(0, "${e.message} (${e.source})\n", null)
+                addOutputLine("${e.message} (${e.source})")
             } catch (e: Exception) {
-                outputPane.document.insertString(0, "Error: ${e.message}\n", null)
+                addOutputLine("Error: ${e.message}")
             }
+        }
+
+        private fun addOutputLine(line: String) {
+            val doc = outputPane.document
+            doc.insertString(doc.length, "${line}\n", null)
         }
     }
 }
