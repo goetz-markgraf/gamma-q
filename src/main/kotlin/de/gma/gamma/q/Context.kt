@@ -72,7 +72,7 @@ class Context(var name: String, val folder: String = ".") {
             expression.evaluate(scope)
             sources.replace(name, sourceNumber)
             saveSource(sourceNumber, code)
-            removeSource(getSourceName(oldSource))
+            removeSourceFile(getSourceName(oldSource))
         } else {
             expression.evaluate(scope)
             sources[name] = sourceNumber
@@ -134,6 +134,10 @@ class Context(var name: String, val folder: String = ".") {
         Parser(code).nextExpression()?.evaluate(scope)
     }
 
+    private fun removeSource(number: Int?) =
+        if (number == null) null
+        else File(parentFolder, getSourceName(number)).delete()
+
     private fun saveSource(number: Int, content: String) =
         File(parentFolder, getSourceName(number)).writeText(content)
 
@@ -144,7 +148,7 @@ class Context(var name: String, val folder: String = ".") {
     private fun getSourceName(number: Int) =
         "$number.gma"
 
-    private fun removeSource(name: String) =
+    private fun removeSourceFile(name: String) =
         File(parentFolder, name).delete()
 
     private fun handleExecuteExpression(expression: Value): Pair<Value, String> {
@@ -160,6 +164,14 @@ class Context(var name: String, val folder: String = ".") {
         (sources
             .values.maxOfOrNull { it } ?: 0) + 1
 
+    fun removeBinding(name: String) {
+        scope.removeBinding(name)
+        val codeNumber = sources[name] ?: return
+        removeSource(codeNumber)
+        sources.remove(name)
+        storeContent()
+    }
+
     companion object {
         private val rootScope = GammaBaseScope
     }
@@ -167,6 +179,11 @@ class Context(var name: String, val folder: String = ".") {
     private inner class InteractiveScope(parent: Scope? = null) : ModuleScope("", parent) {
         override fun bindValue(name: String, value: Value, documentation: Remark?, strict: Boolean) {
             super.bindValue(name, value, documentation, false)
+        }
+
+        fun removeBinding(name: String) {
+            content.remove(name)
+            remarks.remove(name)
         }
     }
 

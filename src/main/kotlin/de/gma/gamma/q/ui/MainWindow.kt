@@ -20,12 +20,16 @@ class MainWindow(private val context: Context) : JFrame() {
     private val textPane = createEditor()
     private val outputPane = createErrorPane()
     private val editor = textPane.styledDocument
+    private val executeAction = ExecuteAction()
+    private val clearOutputAction = ClearOutputAction()
+    private val removeBindingAction = RemoveBindingAction()
 
     init {
         title = "Gamma Q – ${context.name}(${context.folder})"
         defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
 
         contentPane = createContentPane()
+        jMenuBar = createMenu()
     }
 
     fun open() {
@@ -43,6 +47,7 @@ class MainWindow(private val context: Context) : JFrame() {
         scopeListModel.addAll(context.getBindings())
         editor.remove(0, editor.length)
         editor.insertString(0, "let ", null)
+        removeBindingAction.isEnabled = false
     }
 
     private fun createContentPane() =
@@ -58,12 +63,13 @@ class MainWindow(private val context: Context) : JFrame() {
         }
 
     private fun createBrowserPanel() =
-        JPanel(RasterLayout(50, 12)).apply {
+        JPanel(RasterLayout(50, 15)).apply {
             add("1 1", JLabel("Scope"))
-            add("1 3 12 -1", JScrollPane(scopeList))
+            add("1 3 12 -3", JScrollPane(scopeList))
+            add("1 -1 3 2", SmallIconButton(removeBindingAction))
 
             add("15 1", JLabel("Watch"))
-            add("15 3 12 -1", JScrollPane(watchList))
+            add("15 3 12 -3", JScrollPane(watchList))
         }
 
     private fun createScopeList() =
@@ -87,26 +93,20 @@ class MainWindow(private val context: Context) : JFrame() {
     private fun createEditorPane() =
         JPanel(RasterLayout(10, 8)).apply {
             add("1 1 -5 -1", JScrollPane(textPane))
-            add("-1 1 3 2", JButton(ExecuteAction()).apply {
-                border = BorderFactory.createEmptyBorder()
-                hideActionText = true
-            })
+            add("-1 1 3 2", SmallIconButton(executeAction))
         }
 
     private fun createOutputPane() =
-        JPanel(RasterLayout(10, 5)).apply {
+        JPanel(RasterLayout(10, 8)).apply {
             add("1 1 -5 -1", JScrollPane(outputPane))
-            add("-1 1 3 2", JButton(ClearOutputAction()).apply {
-                border = BorderFactory.createEmptyBorder()
-                hideActionText = true
-            })
+            add("-1 1 3 2", SmallIconButton(clearOutputAction))
         }
 
     private fun createEditor() =
         JTextPane().apply {
             font = Font("Serif", Font.PLAIN, 18)
-            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.META_DOWN_MASK), "execute")
-            actionMap.put("execute", ExecuteAction())
+//            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.META_DOWN_MASK), "execute")
+//            actionMap.put("execute", ExecuteAction())
             preferredSize = Dimension(300, 150)
         }
 
@@ -118,10 +118,23 @@ class MainWindow(private val context: Context) : JFrame() {
         }
 
     private fun loadSource(binding: String?) {
-        if (binding == null) return
+        if (binding == null) {
+            removeBindingAction.isEnabled = false
+            return
+        }
         editor.remove(0, editor.length)
         editor.insertString(0, context.getSourceForBinding(binding), null)
+        removeBindingAction.isEnabled = true
     }
+
+    private fun createMenu() =
+        JMenuBar().apply {
+            add(JMenu("File").apply {
+                add(JMenuItem(executeAction))
+                add(JMenuItem(clearOutputAction))
+                add(JMenuItem(removeBindingAction))
+            })
+        }
 
     companion object {
         private fun padding(i: Int = 1) = BorderFactory.createEmptyBorder(5 * i, 5 * i, 5 * i, 5 * i)
@@ -168,5 +181,26 @@ class MainWindow(private val context: Context) : JFrame() {
         override fun actionPerformed(e: ActionEvent?) {
             outputPane.document.remove(0, outputPane.document.length)
         }
+    }
+
+    inner class RemoveBindingAction() : AbstractAction("Remove Binding") {
+        init {
+            putValue(SMALL_ICON, ImageIcon(MainWindow::class.java.getResource("/images/remove_binding.png")))
+            putValue(SHORT_DESCRIPTION, "removes selected binding from scope")
+            putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SPACE, KeyEvent.META_DOWN_MASK))
+        }
+
+        override fun actionPerformed(e: ActionEvent?) {
+            val sel = scopeList.selectedValue ?: return
+            context.removeBinding(sel)
+            refresh()
+        }
+    }
+}
+
+class SmallIconButton(action: Action) : JButton(action) {
+    init {
+        border = BorderFactory.createEmptyBorder()
+        hideActionText = true
     }
 }

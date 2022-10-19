@@ -61,6 +61,17 @@ class ContextTest {
         }
 
         @Test
+        fun `should remove a binding`() {
+            ctx.execute("let a = 10")
+            ctx.removeBinding("a")
+            assertThat(ctx.getBindings()).doesNotContain("a")
+            assertThatThrownBy {
+                ctx.execute("a")
+            }.isInstanceOf(EvaluationException::class.java)
+                .hasMessage("id a is undefined.")
+        }
+
+        @Test
         fun `should return void if no expression in code`() {
             assertThat(ctx.execute("").first).isEqualTo(VoidValue.build())
         }
@@ -125,6 +136,17 @@ class ContextTest {
             assertThat(codeFile).hasContent("let a = 10")
 
             assertProjectProperties(listOf("a" to 1))
+        }
+
+        @Test
+        fun `should remove the code when removing a binding`() {
+            ctx.execute("let a = 10")
+            ctx.removeBinding("a")
+
+            val codeFile = File(projectFolder, "1.gma")
+
+            assertProjectProperties(emptyList())
+            assertThat(codeFile).doesNotExist()
         }
 
         @Test
