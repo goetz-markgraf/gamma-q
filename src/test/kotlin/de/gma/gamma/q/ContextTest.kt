@@ -368,5 +368,19 @@ class ContextTest {
             assertThat(result.second).isEqualTo("10")
         }
 
+        @Test
+        fun `shall collect no output`() {
+            val result = ctx.execute("10")
+            assertThat(result.second).isEmpty()
+        }
+
+        @Test
+        fun `shall collect no duplicate output`() {
+            val result = ctx.execute("print* 10")
+            assertThat(result.second).isEqualTo("10")
+
+            val result2 = ctx.execute("10")
+            assertThat(result2.second).isEmpty()
+        }
     }
 }
