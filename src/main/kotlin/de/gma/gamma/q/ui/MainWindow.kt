@@ -52,7 +52,7 @@ class MainWindow(private val context: Context) : JFrame() {
                 JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
                     createBrowserPanel(),
-                    createEditorPanel()
+                    createCodePanel()
                 ), BorderLayout.CENTER
             )
         }
@@ -78,11 +78,28 @@ class MainWindow(private val context: Context) : JFrame() {
         }
 
 
-    private fun createEditorPanel() =
+    private fun createCodePanel() =
         JSplitPane(JSplitPane.VERTICAL_SPLIT).apply {
-            border = padding(2)
-            leftComponent = JScrollPane(textPane)
-            rightComponent = JScrollPane(outputPane)
+            leftComponent = createEditorPane()
+            rightComponent = createOutputPane()
+        }
+
+    private fun createEditorPane() =
+        JPanel(RasterLayout(10, 8)).apply {
+            add("1 1 -5 -1", JScrollPane(textPane))
+            add("-1 1 3 2", JButton(ExecuteAction()).apply {
+                border = BorderFactory.createEmptyBorder()
+                hideActionText = true
+            })
+        }
+
+    private fun createOutputPane() =
+        JPanel(RasterLayout(10, 5)).apply {
+            add("1 1 -5 -1", JScrollPane(outputPane))
+            add("-1 1 3 2", JButton(ClearOutputAction()).apply {
+                border = BorderFactory.createEmptyBorder()
+                hideActionText = true
+            })
         }
 
     private fun createEditor() =
@@ -110,11 +127,12 @@ class MainWindow(private val context: Context) : JFrame() {
         private fun padding(i: Int = 1) = BorderFactory.createEmptyBorder(5 * i, 5 * i, 5 * i, 5 * i)
     }
 
-    // ==========================================================
+    // ===================== Actions =====================================
 
     inner class ExecuteAction() :
         AbstractAction("Execute") {
         init {
+            putValue(SMALL_ICON, ImageIcon(MainWindow::class.java.getResource("/images/execute.png")))
             putValue(SHORT_DESCRIPTION, "executes the code in the editor pane")
             putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.META_DOWN_MASK))
         }
@@ -137,6 +155,18 @@ class MainWindow(private val context: Context) : JFrame() {
         private fun addOutputLine(line: String) {
             val doc = outputPane.document
             doc.insertString(doc.length, "${line}\n", null)
+        }
+    }
+
+    inner class ClearOutputAction() : AbstractAction("Clear Output") {
+        init {
+            putValue(SMALL_ICON, ImageIcon(MainWindow::class.java.getResource("/images/clear_output.png")))
+            putValue(SHORT_DESCRIPTION, "clears all output in output pane")
+            putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, KeyEvent.META_DOWN_MASK))
+        }
+
+        override fun actionPerformed(e: ActionEvent?) {
+            outputPane.document.remove(0, outputPane.document.length)
         }
     }
 }
