@@ -9,9 +9,8 @@ import de.gma.gamma.datatypes.scope.ModuleScope
 import de.gma.gamma.datatypes.scope.Scope
 import de.gma.gamma.datatypes.values.VoidValue
 import de.gma.gamma.parser.Parser
-import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
+import java.io.*
+import java.nio.charset.Charset
 import java.util.*
 
 private const val GMA_SOURCE = ".gma_source"
@@ -26,6 +25,7 @@ class Context(var name: String, val folder: String = ".") {
     private val parentFolder = File(folder, GMA_SOURCE)
 
     private val scope = InteractiveScope(rootScope)
+    private val output = ByteArrayOutputStream()
 
     private val sources = mutableMapOf<String, Int>()
 
@@ -34,11 +34,11 @@ class Context(var name: String, val folder: String = ".") {
         readContent()
     }
 
-    fun execute(code: String): Value {
+    fun execute(code: String): Pair<Value, String> {
         val sourceNumber = nextSourceNumber()
         val sourceName = getSourceName(sourceNumber)
         val parser = Parser(code, sourceName)
-        val expression = parser.nextExpression() ?: return VoidValue.build()
+        val expression = parser.nextExpression() ?: return VoidValue.build() to ""
 
         if (parser.nextExpression() != null) {
             throw RuntimeException("Cannot have multiple expressions in one source")
@@ -64,8 +64,9 @@ class Context(var name: String, val folder: String = ".") {
         expression: LetExpression,
         sourceNumber: Int,
         code: String
-    ): Value {
+    ): Pair<Value, String> {
         val name = expression.identifier.name
+        GammaBaseScope.output = PrintStream(output)
         if (getBindings().contains(name)) {
             val oldSource = sources[name]!!
             expression.evaluate(scope)
@@ -78,7 +79,17 @@ class Context(var name: String, val folder: String = ".") {
             saveSource(sourceNumber, code)
         }
         storeContent()
-        return VoidValue.build()
+        val out = returnAndCloseOutput()
+        return VoidValue.build() to out
+    }
+
+    private fun returnAndCloseOutput(): String {
+        val out = output.toString(Charset.defaultCharset())!!
+        GammaBaseScope.output.close()
+        GammaBaseScope.output = System.out
+        output.close()
+        output.reset()
+        return out
     }
 
     private fun storeContent() {
@@ -136,10 +147,14 @@ class Context(var name: String, val folder: String = ".") {
     private fun removeSource(name: String) =
         File(parentFolder, name).delete()
 
-    private fun handleExecuteExpression(expression: Value) =
-        expression.evaluate(scope).apply {
-            storeContent()
-        }
+    private fun handleExecuteExpression(expression: Value): Pair<Value, String> {
+        GammaBaseScope.output = PrintStream(output)
+        val retVal = expression.evaluate(scope)
+        storeContent()
+        val retOut = returnAndCloseOutput()
+
+        return retVal to retOut
+    }
 
     private fun nextSourceNumber() =
         (sources

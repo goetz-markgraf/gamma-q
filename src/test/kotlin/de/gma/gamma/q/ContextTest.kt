@@ -24,6 +24,12 @@ class ContextTest {
 
     private lateinit var ctx: Context
 
+    @BeforeEach
+    fun setup() {
+        File(baseFolderName).mkdirs()
+        ctx = Context(TEST_PROJECT_NAME, baseFolderName)
+    }
+
     @AfterEach
     fun cleanUp() {
         File(baseFolderName).deleteRecursively()
@@ -31,13 +37,6 @@ class ContextTest {
 
     @Nested
     inner class CleanProjectTests {
-
-
-        @BeforeEach
-        fun setup() {
-            File(baseFolderName).mkdirs()
-            ctx = Context(TEST_PROJECT_NAME, baseFolderName)
-        }
 
         @Test
         fun `should return its name`() {
@@ -51,19 +50,19 @@ class ContextTest {
 
         @Test
         fun `should evaluate a simple expression`() {
-            assertThat(ctx.execute("10").toInteger().longValue).isEqualTo(10L)
+            assertThat(ctx.execute("10").first.toInteger().longValue).isEqualTo(10L)
         }
 
         @Test
         fun `should create a new binding`() {
             ctx.execute("let a = 10")
             assertThat(ctx.getBindings()).containsExactly("a")
-            assertThat(ctx.execute("a").toInteger().longValue).isEqualTo(10L)
+            assertThat(ctx.execute("a").first.toInteger().longValue).isEqualTo(10L)
         }
 
         @Test
         fun `should return void if no expression in code`() {
-            assertThat(ctx.execute("")).isEqualTo(VoidValue.build())
+            assertThat(ctx.execute("").first).isEqualTo(VoidValue.build())
         }
 
         @Test
@@ -115,12 +114,6 @@ class ContextTest {
 
     @Nested
     inner class StoreProjectTests {
-
-        @BeforeEach
-        fun setup() {
-            File(baseFolderName).mkdirs()
-            ctx = Context(TEST_PROJECT_NAME, baseFolderName)
-        }
 
         @Test
         fun `should store a first binding in code 1`() {
@@ -218,7 +211,7 @@ class ContextTest {
 
             assertThat(ctx.name).isEqualTo(TEST_LOAD_PROJECT_NAME)
             assertThat(ctx.getBindings()).hasSize(1)
-            assertThat(ctx.execute("a").toInteger().longValue).isEqualTo(10L)
+            assertThat(ctx.execute("a").first.toInteger().longValue).isEqualTo(10L)
         }
 
         @Test
@@ -228,8 +221,8 @@ class ContextTest {
 
             assertThat(ctx.name).isEqualTo(TEST_LOAD_PROJECT_NAME)
             assertThat(ctx.getBindings()).hasSize(2)
-            assertThat(ctx.execute("a").toInteger().longValue).isEqualTo(10L)
-            assertThat(ctx.execute("b").toInteger().longValue).isEqualTo(20L)
+            assertThat(ctx.execute("a").first.toInteger().longValue).isEqualTo(10L)
+            assertThat(ctx.execute("b").first.toInteger().longValue).isEqualTo(20L)
         }
 
         @Test
@@ -238,7 +231,7 @@ class ContextTest {
 
             val ctx = Context("", baseFolderName)
 
-            assertThat(ctx.execute("a + b + c").toInteger().longValue).isEqualTo(60L)
+            assertThat(ctx.execute("a + b + c").first.toInteger().longValue).isEqualTo(60L)
         }
 
         @Test
@@ -364,5 +357,16 @@ class ContextTest {
                 .hasCauseInstanceOf(causeClass)
                 .hasRootCauseMessage(message)
         }
+    }
+
+    @Nested
+    inner class OutputTest {
+
+        @Test
+        fun `shall collect output`() {
+            val result = ctx.execute("print* 10")
+            assertThat(result.second).isEqualTo("10")
+        }
+
     }
 }

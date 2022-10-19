@@ -123,8 +123,10 @@ class MainWindow(private val context: Context) : JFrame() {
             try {
                 val result = context.execute(editor.getText(0, editor.length))
                 refresh()
-                if (result !is VoidValue)
-                    addOutputLine(result.toString())
+                if (result.second.isNotBlank())
+                    addOutputLine("===\n${result.second}===\n")
+                if (result.first !is VoidValue)
+                    addOutputLine(result.first.toString())
             } catch (e: EvaluationException) {
                 addOutputLine("${e.message} (${e.source})")
             } catch (e: Exception) {
