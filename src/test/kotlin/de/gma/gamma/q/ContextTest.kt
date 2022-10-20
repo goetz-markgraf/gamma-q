@@ -58,6 +58,22 @@ class ContextTest {
             ctx.execute("let a = 10")
             assertThat(ctx.getBindings()).containsExactly("a")
             assertThat(ctx.execute("a").first.toInteger().longValue).isEqualTo(10L)
+            assertThat(ctx.getRemarkForBinding("a")).isEmpty()
+        }
+
+        @Test
+        fun `should create a new binding with a comment`() {
+            ctx.execute("'this is documentation'\nlet a = 10")
+            assertThat(ctx.getBindings()).containsExactly("a")
+            assertThat(ctx.execute("a").first.toInteger().longValue).isEqualTo(10L)
+            assertThat(ctx.getRemarkForBinding("a")).isEqualTo("a – this is documentation")
+        }
+
+        @Test
+        fun `should create a new function binding with a comment`() {
+            ctx.execute("'this is documentation'\nlet add a b = a + b")
+            assertThat(ctx.getBindings()).containsExactly("add")
+            assertThat(ctx.getRemarkForBinding("add")).isEqualTo("add a b – this is documentation")
         }
 
         @Test

@@ -60,6 +60,9 @@ class Context(var name: String, val folder: String = ".") {
     fun getSourceForBinding(binding: String) =
         loadSource(sources[binding]) ?: ""
 
+    fun getRemarkForBinding(binding: String) =
+        scope.getRemark(binding)
+
     private fun handleLetExpression(
         expression: LetExpression,
         sourceNumber: Int,
