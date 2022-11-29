@@ -9,8 +9,9 @@ import de.gma.gamma.datatypes.scope.ModuleScope
 import de.gma.gamma.datatypes.scope.Scope
 import de.gma.gamma.datatypes.values.VoidValue
 import de.gma.gamma.parser.Parser
-import java.io.*
-import java.nio.charset.Charset
+import java.io.File
+import java.io.FileReader
+import java.io.FileWriter
 import java.util.*
 
 private const val GMA_SOURCE = ".gma_source"
@@ -25,7 +26,6 @@ class Context(var name: String, val folder: String = ".") {
     private val parentFolder = File(folder, GMA_SOURCE)
 
     private val scope = InteractiveScope(rootScope)
-    private val output = ByteArrayOutputStream()
 
     private val sources = mutableMapOf<String, Int>()
 
@@ -69,7 +69,6 @@ class Context(var name: String, val folder: String = ".") {
         code: String
     ): Pair<Value, String> {
         val name = expression.identifier.name
-        GammaBaseScope.output = PrintStream(output)
         if (getBindings().contains(name)) {
             val oldSource = sources[name]!!
             expression.evaluate(scope)
@@ -82,16 +81,13 @@ class Context(var name: String, val folder: String = ".") {
             saveSource(sourceNumber, code)
         }
         storeContent()
-        val out = returnAndCloseOutput()
+        val out = returnOutput()
         return VoidValue.build() to out
     }
 
-    private fun returnAndCloseOutput(): String {
-        val out = output.toString(Charset.defaultCharset())!!
-        GammaBaseScope.output.close()
-        GammaBaseScope.output = System.out
-        output.close()
-        output.reset()
+    private fun returnOutput(): String {
+        val out = GammaBaseScope.output.toString()
+        GammaBaseScope.output.clear()
         return out
     }
 
@@ -155,10 +151,9 @@ class Context(var name: String, val folder: String = ".") {
         File(parentFolder, name).delete()
 
     private fun handleExecuteExpression(expression: Value): Pair<Value, String> {
-        GammaBaseScope.output = PrintStream(output)
         val retVal = expression.evaluate(scope)
         storeContent()
-        val retOut = returnAndCloseOutput()
+        val retOut = returnOutput()
 
         return retVal to retOut
     }
