@@ -23,6 +23,8 @@ const val PROP_BINDING_PREFIX = "binding"
 const val PROP_SOURCE_PREFIX = "source"
 
 class Context(var name: String, val folder: String = ".") {
+    private val output = StringBuilder()
+
     private val parentFolder = File(folder, GMA_SOURCE)
 
     private val scope = InteractiveScope(rootScope)
@@ -32,6 +34,7 @@ class Context(var name: String, val folder: String = ".") {
     init {
         parentFolder.mkdirs()
         readContent()
+        rootScope.doPrint = { output.append(it) }
     }
 
     fun execute(code: String): Pair<Value, String> {
@@ -86,8 +89,8 @@ class Context(var name: String, val folder: String = ".") {
     }
 
     private fun returnOutput(): String {
-        val out = GammaBaseScope.output.toString()
-        GammaBaseScope.output.clear()
+        val out = output.toString()
+        output.clear()
         return out
     }
 
